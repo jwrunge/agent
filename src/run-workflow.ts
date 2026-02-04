@@ -1,3 +1,4 @@
+import { createInterface } from "node:readline/promises";
 import {
 	AuthStorage,
 	createAgentSession,
@@ -7,6 +8,9 @@ import dotenv from "dotenv";
 
 import { getConfig } from "./config/config.ts";
 import { ensureOllamaReady } from "./config/ollama.ts";
+import { createInMemoryEmailClient } from "./email/email-client.ts";
+import { createEmailTools } from "./email/email-tools.ts";
+import { createStateMachine } from "./state-machine.ts";
 import type { ModelConfig, ProviderConfig } from "./types.ts";
 
 dotenv.config({
@@ -62,7 +66,12 @@ const main = async (): Promise<void> => {
 	}
 
 	process.stdout.write("Creating agent session...\n");
-	const { session } = await createAgentSession({ modelRegistry });
+	const emailClient = createInMemoryEmailClient();
+	const customTools = createEmailTools(emailClient);
+	const { session } = await createAgentSession({
+		modelRegistry,
+		customTools,
+	});
 	process.stdout.write("Session created.\n");
 
 	session.subscribe((event) => {
@@ -74,10 +83,47 @@ const main = async (): Promise<void> => {
 		}
 	});
 
-	process.stdout.write("Prompting model...\n");
-	await session.prompt(
-		"Summarize the project status and propose next steps for this repo.",
-	);
+	process.stdout.write("Chat ready. Type /exit to quit.\n");
+	process.stdout.write("Use /mode chat|coding|planning to switch.\n");
+	const stateMachine = createStateMachine("chat");
+	const rl = createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+
+	try {
+		while (true) {
+			const input = await rl.question("\n> ");
+			const trimmed = input.trim();
+			if (!trimmed || trimmed === "/exit" || trimmed === "/quit") {
+				break;
+			}
+			if (trimmed.startsWith("/mode")) {
+				const parts = trimmed.split(/\s+/);
+				const mode = parts[1];
+				if (mode === "chat" || mode === "coding" || mode === "planning") {
+					stateMachine.setMode(mode);
+					process.stdout.write(`Mode set to ${mode}.\n`);
+				} else {
+					process.stdout.write(
+						"Usage: /mode chat|coding|planning\n",
+					);
+				}
+				continue;
+			}
+			if (trimmed === "/state") {
+				const { mode } = stateMachine.getState();
+				process.stdout.write(`Current mode: ${mode}.\n`);
+				continue;
+			}
+			process.stdout.write("\n");
+			await session.prompt(stateMachine.buildPrompt(trimmed));
+			process.stdout.write("\n");
+		}
+	} finally {
+		rl.close();
+	}
+
 	process.stdout.write("\nDone.\n");
 };
 

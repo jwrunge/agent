@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@mariozechner/pi-coding-agent": "^0.51.6",
+    "@sinclair/typebox": "^0.34.4",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
