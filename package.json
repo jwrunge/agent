@@ -1,6 +1,0 @@
-{
-  "name": "pi-dev-workflow",
-  "private": true,
-  "description": "Deprecated: this repo now uses Deno. You can delete package.json.",
-  "type": "module"
-}
