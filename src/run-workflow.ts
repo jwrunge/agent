@@ -5,15 +5,15 @@ import {
 } from "@mariozechner/pi-coding-agent";
 import dotenv from "dotenv";
 
-import { getConfig } from "./config.ts";
-import { ensureOllamaReady } from "./ollama.js";
+import { getConfig } from "./config/config.ts";
+import { ensureOllamaReady } from "./config/ollama.ts";
 import type { ModelConfig, ProviderConfig } from "./types.ts";
 
 dotenv.config({
 	path: new URL("../.env", import.meta.url),
 });
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
 	process.stdout.write("Initializing config...\n");
 	const config = await getConfig();
 	process.stdout.write("Config loaded.\n");
@@ -79,7 +79,7 @@ async function main(): Promise<void> {
 		"Summarize the project status and propose next steps for this repo.",
 	);
 	process.stdout.write("\nDone.\n");
-}
+};
 
 main().catch((error) => {
 	console.error(error);

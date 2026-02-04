@@ -2,14 +2,14 @@ import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline/promises";
 import { promisify } from "node:util";
 
-import type { ModelConfig, ProviderConfig } from "./types.js";
+import type { ModelConfig, ProviderConfig } from "../types.ts";
 
 const execFileAsync = promisify(execFile);
 
-async function runWithInheritedStdio(
+const runWithInheritedStdio = async (
 	command: string,
 	args: string[],
-): Promise<void> {
+): Promise<void> => {
 	await new Promise<void>((resolve, reject) => {
 		const child = spawn(command, args, { stdio: "inherit" });
 		child.on("error", reject);
@@ -21,12 +21,12 @@ async function runWithInheritedStdio(
 			}
 		});
 	});
-}
+};
 
-export async function ensureOllamaReady(
+export const ensureOllamaReady = async (
 	providerConfig: ProviderConfig,
 	models: ModelConfig[],
-): Promise<void> {
+): Promise<void> => {
 	const baseUrl = providerConfig.baseUrl ?? "";
 	const isLocal =
 		baseUrl.includes("localhost") || baseUrl.includes("127.0.0.1");
@@ -67,9 +67,9 @@ export async function ensureOllamaReady(
 		await runWithInheritedStdio("ollama", ["pull", modelId]);
 		process.stdout.write(`Model pulled: ${modelId}.\n`);
 	}
-}
+};
 
-async function confirmPrompt(message: string): Promise<boolean> {
+const confirmPrompt = async (message: string): Promise<boolean> => {
 	const rl = createInterface({
 		input: process.stdin,
 		output: process.stdout,
@@ -80,18 +80,18 @@ async function confirmPrompt(message: string): Promise<boolean> {
 	} finally {
 		rl.close();
 	}
-}
+};
 
-async function commandExists(command: string): Promise<boolean> {
+const commandExists = async (command: string): Promise<boolean> => {
 	try {
 		await execFileAsync("/usr/bin/env", ["command", "-v", command]);
 		return true;
 	} catch {
 		return false;
 	}
-}
+};
 
-async function installOllama(): Promise<void> {
+const installOllama = async (): Promise<void> => {
 	switch (process.platform) {
 		case "darwin": {
 			const hasBrew = await commandExists("brew");
@@ -138,18 +138,18 @@ async function installOllama(): Promise<void> {
 				"Unsupported OS for automatic Ollama install. Install Ollama manually from https://ollama.com/download.",
 			);
 	}
-}
+};
 
-async function ollamaHasModel(modelId: string): Promise<boolean> {
+const ollamaHasModel = async (modelId: string): Promise<boolean> => {
 	try {
 		const { stdout } = await execFileAsync("ollama", ["list"]);
 		return stdout.split("\n").some((line) => line.startsWith(modelId));
 	} catch {
 		return false;
 	}
-}
+};
 
-async function ollamaModelSize(modelId: string): Promise<string | null> {
+const ollamaModelSize = async (modelId: string): Promise<string | null> => {
 	try {
 		const { stdout } = await execFileAsync("ollama", ["show", modelId]);
 		const sizeLine = stdout
@@ -163,4 +163,4 @@ async function ollamaModelSize(modelId: string): Promise<string | null> {
 	} catch {
 		return null;
 	}
-}
+};

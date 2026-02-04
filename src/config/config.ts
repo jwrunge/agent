@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { PiDefaultsConfig, PiDefaultsOverrides } from "./types.js";
+import type { PiDefaultsConfig, PiDefaultsOverrides } from "../types.ts";
 
 const DEFAULTS: PiDefaultsConfig = {
 	providers: {
@@ -14,10 +14,10 @@ const DEFAULTS: PiDefaultsConfig = {
 	models: [{ id: "llama3.1:8b" }],
 };
 
-function mergeProviders(
+const mergeProviders = (
 	base: PiDefaultsConfig["providers"],
 	overrides?: PiDefaultsOverrides["providers"]
-): PiDefaultsConfig["providers"] {
+): PiDefaultsConfig["providers"] => {
 	if (!overrides) {
 		return base;
 	}
@@ -34,23 +34,24 @@ function mergeProviders(
 					providerOverride.models ?? existing.models ?? [],
 			};
 		} else if (providerOverride) {
+			// biome-ignore lint/style/noNonNullAssertion: We've checked that it's non-null
 			merged[providerName] = providerOverride!;
 		}
 	}
 
 	return merged;
-}
+};
 
-function mergeConfig(overrides?: PiDefaultsOverrides): PiDefaultsConfig {
+const mergeConfig = (overrides?: PiDefaultsOverrides): PiDefaultsConfig => {
 	return {
 		providers: mergeProviders(DEFAULTS.providers, overrides?.providers),
 		models: overrides?.models ?? DEFAULTS.models,
 	};
-}
+};
 
-async function readOverrides(
+const readOverrides = async (
 	overridesPath: string
-): Promise<PiDefaultsOverrides | undefined> {
+): Promise<PiDefaultsOverrides | undefined> => {
 	try {
 		const raw = await readFile(overridesPath, "utf-8");
 		return JSON.parse(raw) as PiDefaultsOverrides;
@@ -66,10 +67,10 @@ async function readOverrides(
 	}
 }
 
-export async function getConfig(options?: {
+export const getConfig = async (options?: {
 	cwd?: string;
 	overridesPath?: string;
-}): Promise<PiDefaultsConfig> {
+}): Promise<PiDefaultsConfig> => {
 	const cwd = options?.cwd ?? process.cwd();
 	const overridesPath = options?.overridesPath
 		? resolve(cwd, options.overridesPath)
@@ -77,4 +78,4 @@ export async function getConfig(options?: {
 
 	const overrides = await readOverrides(overridesPath);
 	return mergeConfig(overrides);
-}
+};
