@@ -14,7 +14,7 @@ import { createStateMachine } from "./state-machine.ts";
 import type { ModelConfig, ProviderConfig } from "./types.ts";
 
 dotenv.config({
-	path: new URL("../.env", import.meta.url),
+	path: new URL(".env", import.meta.url),
 });
 
 const main = async (): Promise<void> => {
