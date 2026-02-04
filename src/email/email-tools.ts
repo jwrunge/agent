@@ -1,7 +1,7 @@
-import type { ToolDefinition } from "@mariozechner/pi-coding-agent";
-import { type Static, Type } from "@sinclair/typebox";
+import type { ToolDefinition } from "npm:@mariozechner/pi-coding-agent@^0.51.6";
+import { type Static, Type } from "npm:@sinclair/typebox@^0.34.4";
 
-import type { EmailClient } from "./email-client.js";
+import type { EmailClient } from "./email-client.ts";
 
 const listThreadsSchema = Type.Object({
 	limit: Type.Optional(Type.Number({ minimum: 1, maximum: 50 })),

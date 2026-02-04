@@ -1,10 +1,11 @@
+import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import {
 	AuthStorage,
 	createAgentSession,
 	ModelRegistry,
-} from "@mariozechner/pi-coding-agent";
-import dotenv from "dotenv";
+} from "npm:@mariozechner/pi-coding-agent@^0.51.6";
+import { load } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
 
 import { getConfig } from "./config/config.ts";
 import { ensureOllamaReady } from "./config/ollama.ts";
@@ -13,11 +14,8 @@ import { createEmailTools } from "./email/email-tools.ts";
 import { createStateMachine } from "./state-machine.ts";
 import type { ModelConfig, ProviderConfig } from "./types.ts";
 
-dotenv.config({
-	path: new URL(".env", import.meta.url),
-});
-
 const main = async (): Promise<void> => {
+	await load({ envPath: ".env", examplePath: ".env.example", allowEmptyValues: true });
 	process.stdout.write("Initializing config...\n");
 	const config = await getConfig();
 	process.stdout.write("Config loaded.\n");
@@ -105,9 +103,7 @@ const main = async (): Promise<void> => {
 					stateMachine.setMode(mode);
 					process.stdout.write(`Mode set to ${mode}.\n`);
 				} else {
-					process.stdout.write(
-						"Usage: /mode chat|coding|planning\n",
-					);
+					process.stdout.write("Usage: /mode chat|coding|planning\n");
 				}
 				continue;
 			}

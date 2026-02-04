@@ -1,6 +1,6 @@
-# pi-coding-agent TypeScript scaffold
+# pi-coding-agent Deno scaffold
 
-This workspace provides a minimal TypeScript SDK example for @mariozechner/pi-coding-agent, plus quick notes for the CLI.
+This workspace provides a minimal Deno SDK example for @mariozechner/pi-coding-agent, plus quick notes for the CLI.
 
 ## Structure
 - src/: minimal SDK workflow runner
@@ -19,10 +19,14 @@ pi
 ```
 Then run `/login` or set provider keys in `.env` and restart.
 
-## SDK quickstart
+## SDK quickstart (Deno)
 ```
-npm install
-npm run start
+deno task dev
+```
+
+## Build a binary
+```
+deno task compile
 ```
 
 ## Notes

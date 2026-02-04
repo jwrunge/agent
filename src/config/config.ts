@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import process from "node:process";
 import type { PiDefaultsConfig, PiDefaultsOverrides } from "../types.ts";
 
 const DEFAULTS: PiDefaultsConfig = {
@@ -59,7 +60,7 @@ const readOverrides = async (
 		const isNotFound =
 			error instanceof Error &&
 			"code" in error &&
-			(error as NodeJS.ErrnoException).code === "ENOENT";
+			(error as { code?: string }).code === "ENOENT";
 		if (isNotFound) {
 			return undefined;
 		}

@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-read --allow-write --allow-env --allow-run --allow-net src/run-workflow.ts",
+    "compile": "deno compile --allow-read --allow-write --allow-env --allow-run --allow-net -o dist/pi-agent src/run-workflow.ts"
+  }
+}

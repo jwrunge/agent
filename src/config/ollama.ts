@@ -1,4 +1,5 @@
 import { execFile, spawn } from "node:child_process";
+import process from "node:process";
 import { createInterface } from "node:readline/promises";
 import { promisify } from "node:util";
 
