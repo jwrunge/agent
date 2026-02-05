@@ -1,4 +1,4 @@
-import type { AgentSession } from "@mariozechner/pi-coding-agent";
+import { createAgentSession, type AgentSession } from "@mariozechner/pi-coding-agent";
 import envPaths from "env-paths";
 import { APP_NAME, type SessionMode } from "./config/appConst.ts";
 
@@ -17,20 +17,15 @@ type NewAgentOptions = {
 	memoryFilePath?: string;
 };
 
-type SystemPrompts = {
-        sysPrompts: string[];
-    }
-| {
-        sysPromptPaths: string[];
-    }
-
-type NewSessionOptions = SystemPrompts & {
+type NewSessionOptions = {
 	mode: SessionMode;
+	sysPrompts: string[];
+	sysPromptPaths: string[];
 };
 
 export class Agent {
 	name: string;
-	sessions = new Map<string, AgentSession>();
+	sessions = new Set<AgentSession>();
 
 	#id: string;
 	#sessionsFilePath = resolvePath(envPath.config, "sessions");
@@ -50,5 +45,13 @@ export class Agent {
 		if (memoryFilePath) this.#memoryFilePath = memoryFilePath;
 	}
 
-	spawnSession(sysPrompts: NewSessionOptions ) {}
+	async spawnSession({ mode, sysPrompts, sysPromptPaths }: NewSessionOptions ) {
+		const id = crypto.randomUUID();
+		const { session } = await createAgentSession({
+			
+		});
+
+		this.sessions.add(session);
+		return session;
+	}
 }
