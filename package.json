@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun run src/run-workflow.ts",
     "compile": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun",
-    "postinstall": "node scripts/patch-pi-config-fixed.cjs"
+    "postinstall": "node scripts/patch-pi-config.ts"
   },
   "dependencies": {
     "@mariozechner/pi-coding-agent": "^0.51.6",
