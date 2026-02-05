@@ -1,6 +1,4 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import process from "node:process";
+import { resolve } from "https://deno.land/std@0.224.0/path/mod.ts";
 import type { PiDefaultsConfig, PiDefaultsOverrides } from "../types.ts";
 
 const DEFAULTS: PiDefaultsConfig = {
@@ -54,14 +52,10 @@ const readOverrides = async (
 	overridesPath: string
 ): Promise<PiDefaultsOverrides | undefined> => {
 	try {
-		const raw = await readFile(overridesPath, "utf-8");
+		const raw = await Deno.readTextFile(overridesPath);
 		return JSON.parse(raw) as PiDefaultsOverrides;
 	} catch (error) {
-		const isNotFound =
-			error instanceof Error &&
-			"code" in error &&
-			(error as { code?: string }).code === "ENOENT";
-		if (isNotFound) {
+		if (error instanceof Deno.errors.NotFound) {
 			return undefined;
 		}
 		throw error;
@@ -72,7 +66,7 @@ export const getConfig = async (options?: {
 	cwd?: string;
 	overridesPath?: string;
 }): Promise<PiDefaultsConfig> => {
-	const cwd = options?.cwd ?? process.cwd();
+	const cwd = options?.cwd ?? Deno.cwd();
 	const overridesPath = options?.overridesPath
 		? resolve(cwd, options.overridesPath)
 		: resolve(cwd, "pi.defaults.json");

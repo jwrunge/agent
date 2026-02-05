@@ -1,27 +1,26 @@
-import { execFile, spawn } from "node:child_process";
-import process from "node:process";
-import { createInterface } from "node:readline/promises";
-import { promisify } from "node:util";
-
 import type { ModelConfig, ProviderConfig } from "../types.ts";
 
-const execFileAsync = promisify(execFile);
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+const write = (text: string) => {
+	Deno.stdout.writeSync(encoder.encode(text));
+};
 
 const runWithInheritedStdio = async (
 	command: string,
 	args: string[],
 ): Promise<void> => {
-	await new Promise<void>((resolve, reject) => {
-		const child = spawn(command, args, { stdio: "inherit" });
-		child.on("error", reject);
-		child.on("close", (code) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				reject(new Error(`${command} exited with code ${code}`));
-			}
-		});
-	});
+	const child = new Deno.Command(command, {
+		args,
+		stdin: "inherit",
+		stdout: "inherit",
+		stderr: "inherit",
+	}).spawn();
+	const status = await child.status;
+	if (!status.success) {
+		throw new Error(`${command} exited with code ${status.code}`);
+	}
 };
 
 export const ensureOllamaReady = async (
@@ -44,9 +43,9 @@ export const ensureOllamaReady = async (
 		if (!installOk) {
 			throw new Error("Ollama is required for this provider.");
 		}
-		process.stdout.write("Installing Ollama...\n");
+		write("Installing Ollama...\n");
 		await installOllama();
-		process.stdout.write("Ollama installed.\n");
+		write("Ollama installed.\n");
 	}
 
 	const modelId = models[0]?.id;
@@ -64,36 +63,33 @@ export const ensureOllamaReady = async (
 		if (!pullOk) {
 			throw new Error("Model download declined.");
 		}
-		process.stdout.write(`Pulling Ollama model: ${modelId}...\n`);
+		write(`Pulling Ollama model: ${modelId}...\n`);
 		await runWithInheritedStdio("ollama", ["pull", modelId]);
-		process.stdout.write(`Model pulled: ${modelId}.\n`);
+		write(`Model pulled: ${modelId}.\n`);
 	}
 };
 
 const confirmPrompt = async (message: string): Promise<boolean> => {
-	const rl = createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-	try {
-		const answer = await rl.question(`${message} (y/N) `);
-		return answer.trim().toLowerCase().startsWith("y");
-	} finally {
-		rl.close();
-	}
+	const answer = globalThis.prompt?.(`${message} (y/N) `) ?? "";
+	return answer.trim().toLowerCase().startsWith("y");
 };
 
 const commandExists = async (command: string): Promise<boolean> => {
 	try {
-		await execFileAsync("/usr/bin/env", ["command", "-v", command]);
-		return true;
+		const checker = Deno.build.os === "windows" ? "where" : "which";
+		const result = await new Deno.Command(checker, {
+			args: [command],
+			stdout: "piped",
+			stderr: "piped",
+		}).output();
+		return result.code === 0;
 	} catch {
 		return false;
 	}
 };
 
 const installOllama = async (): Promise<void> => {
-	switch (process.platform) {
+	switch (Deno.build.os) {
 		case "darwin": {
 			const hasBrew = await commandExists("brew");
 			if (!hasBrew) {
@@ -104,7 +100,7 @@ const installOllama = async (): Promise<void> => {
 			await runWithInheritedStdio("brew", ["install", "ollama"]);
 			return;
 		}
-		case "win32": {
+		case "windows": {
 			if (await commandExists("winget")) {
 				await runWithInheritedStdio("winget", [
 					"install",
@@ -143,7 +139,15 @@ const installOllama = async (): Promise<void> => {
 
 const ollamaHasModel = async (modelId: string): Promise<boolean> => {
 	try {
-		const { stdout } = await execFileAsync("ollama", ["list"]);
+		const result = await new Deno.Command("ollama", {
+			args: ["list"],
+			stdout: "piped",
+			stderr: "piped",
+		}).output();
+		if (result.code !== 0) {
+			return false;
+		}
+		const stdout = decoder.decode(result.stdout);
 		return stdout.split("\n").some((line) => line.startsWith(modelId));
 	} catch {
 		return false;
@@ -152,7 +156,15 @@ const ollamaHasModel = async (modelId: string): Promise<boolean> => {
 
 const ollamaModelSize = async (modelId: string): Promise<string | null> => {
 	try {
-		const { stdout } = await execFileAsync("ollama", ["show", modelId]);
+		const result = await new Deno.Command("ollama", {
+			args: ["show", modelId],
+			stdout: "piped",
+			stderr: "piped",
+		}).output();
+		if (result.code !== 0) {
+			return null;
+		}
+		const stdout = decoder.decode(result.stdout);
 		const sizeLine = stdout
 			.split("\n")
 			.find((line) => line.toLowerCase().startsWith("size:"));

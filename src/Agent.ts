@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { resolve } from "https://deno.land/std@0.224.0/path/mod.ts";
 import type { AgentSession } from "npm:@mariozechner/pi-coding-agent@^0.51.6";
 import envPaths from "npm:env-paths@^3.0.0";
 import { APP_NAME, type SessionMode } from "./config/appConst.ts";
