@@ -1,6 +1,6 @@
-# pi-coding-agent Deno scaffold
+# pi-coding-agent Bun scaffold
 
-This workspace provides a minimal Deno SDK example for @mariozechner/pi-coding-agent, plus quick notes for the CLI.
+This workspace provides a minimal Bun SDK example for @mariozechner/pi-coding-agent, plus quick notes for the CLI.
 
 ## Structure
 - src/: minimal SDK workflow runner
@@ -19,14 +19,15 @@ pi
 ```
 Then run `/login` or set provider keys in `.env` and restart.
 
-## SDK quickstart (Deno)
+## SDK quickstart (Bun)
 ```
-deno task dev
+bun install
+bun run dev
 ```
 
 ## Build a binary
 ```
-deno task compile
+bun run compile
 ```
 
 ## Notes

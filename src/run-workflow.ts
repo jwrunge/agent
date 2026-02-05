@@ -1,11 +1,11 @@
-/// <reference lib="deno.ns" />
-
-import { load } from "https://deno.land/std@0.224.0/dotenv/mod.ts";
+import { createInterface } from "node:readline/promises";
+import process from "node:process";
+import dotenv from "dotenv";
 import {
 	AuthStorage,
 	createAgentSession,
 	ModelRegistry,
-} from "npm:@mariozechner/pi-coding-agent@^0.51.6";
+} from "@mariozechner/pi-coding-agent";
 
 import { getConfig } from "./config/config.ts";
 import { ensureOllamaReady } from "./config/ollama.ts";
@@ -14,25 +14,14 @@ import { createEmailTools } from "./email/email-tools.ts";
 import { createStateMachine } from "./state-machine.ts";
 import type { ModelConfig, ProviderConfig } from "./types.ts";
 
-const encoder = new TextEncoder();
-const write = (text: string) => {
-	Deno.stdout.writeSync(encoder.encode(text));
-};
-
-const promptLine = (message: string): string => {
-	const answer = globalThis.prompt?.(message);
-	return (answer ?? "").trim();
-};
+dotenv.config({
+	path: new URL("../.env", import.meta.url),
+});
 
 const main = async (): Promise<void> => {
-	await load({
-		envPath: ".env",
-		allowEmptyValues: true,
-	});
-
-	write("Initializing config...\n");
+	process.stdout.write("Initializing config...\n");
 	const config = await getConfig();
-	write("Config loaded.\n");
+	process.stdout.write("Config loaded.\n");
 
 	const authStorage = new AuthStorage();
 	const modelRegistry = new ModelRegistry(authStorage);
@@ -59,16 +48,16 @@ const main = async (): Promise<void> => {
 	for (const [providerName, providerConfig] of Object.entries(
 		config.providers,
 	)) {
-		write(`Registering provider: ${providerName}\n`);
+		process.stdout.write(`Registering provider: ${providerName}\n`);
 		const modelsSource =
 			providerConfig.models && providerConfig.models.length > 0
 				? providerConfig.models
 				: config.models;
 
 		if (providerName === "ollama") {
-			write("Ollama preflight...\n");
+			process.stdout.write("Ollama preflight...\n");
 			await ensureOllamaReady(providerConfig, modelsSource);
-			write("Ollama ready.\n");
+			process.stdout.write("Ollama ready.\n");
 		}
 
 		modelRegistry.registerProvider(providerName, {
@@ -77,59 +66,67 @@ const main = async (): Promise<void> => {
 		});
 	}
 
-	write("Creating agent session...\n");
+	process.stdout.write("Creating agent session...\n");
 	const emailClient = createInMemoryEmailClient();
 	const customTools = createEmailTools(emailClient);
 	const { session } = await createAgentSession({
 		modelRegistry,
 		customTools,
 	});
-	write("Session created.\n");
+	process.stdout.write("Session created.\n");
 
 	session.subscribe((event) => {
 		if (
 			event.type === "message_update" &&
 			event.assistantMessageEvent.type === "text_delta"
 		) {
-			write(event.assistantMessageEvent.delta);
+			process.stdout.write(event.assistantMessageEvent.delta);
 		}
 	});
 
-	write("Chat ready. Type /exit to quit.\n");
-	write("Use /mode chat|coding|planning to switch.\n");
+	process.stdout.write("Chat ready. Type /exit to quit.\n");
+	process.stdout.write("Use /mode chat|coding|planning to switch.\n");
 	const stateMachine = createStateMachine("chat");
-	
-	while (true) {
-		const trimmed = promptLine("\n> ");
-		if (!trimmed || trimmed === "/exit" || trimmed === "/quit") {
-			break;
-		}
-		if (trimmed.startsWith("/mode")) {
-			const parts = trimmed.split(/\s+/);
-			const mode = parts[1];
-			if (mode === "chat" || mode === "coding" || mode === "planning") {
-				stateMachine.setMode(mode);
-				write(`Mode set to ${mode}.\n`);
-			} else {
-				write("Usage: /mode chat|coding|planning\n");
+	const rl = createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+
+	try {
+		while (true) {
+			const input = await rl.question("\n> ");
+			const trimmed = input.trim();
+			if (!trimmed || trimmed === "/exit" || trimmed === "/quit") {
+				break;
 			}
-			continue;
+			if (trimmed.startsWith("/mode")) {
+				const parts = trimmed.split(/\s+/);
+				const mode = parts[1];
+				if (mode === "chat" || mode === "coding" || mode === "planning") {
+					stateMachine.setMode(mode);
+					process.stdout.write(`Mode set to ${mode}.\n`);
+				} else {
+					process.stdout.write("Usage: /mode chat|coding|planning\n");
+				}
+				continue;
+			}
+			if (trimmed === "/state") {
+				const { mode } = stateMachine.getState();
+				process.stdout.write(`Current mode: ${mode}.\n`);
+				continue;
+			}
+			process.stdout.write("\n");
+			await session.prompt(stateMachine.buildPrompt(trimmed));
+			process.stdout.write("\n");
 		}
-		if (trimmed === "/state") {
-			const { mode } = stateMachine.getState();
-			write(`Current mode: ${mode}.\n`);
-			continue;
-		}
-		write("\n");
-		await session.prompt(stateMachine.buildPrompt(trimmed));
-		write("\n");
+	} finally {
+		rl.close();
 	}
 
-
-	write("\nDone.\n");
+	process.stdout.write("\nDone.\n");
 };
 
 main().catch((error) => {
 	console.error(error);
-	Deno.exit(1);
+	process.exit(1);
 });
