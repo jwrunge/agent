@@ -1,10 +1,12 @@
 {
   "name": "pi-agent-bun",
   "private": true,
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "bun run src/run-workflow.ts",
-    "compile": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun"
+    "compile": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun",
+    "postinstall": "node scripts/patch-pi-config-fixed.cjs"
   },
   "dependencies": {
     "@mariozechner/pi-coding-agent": "^0.51.6",

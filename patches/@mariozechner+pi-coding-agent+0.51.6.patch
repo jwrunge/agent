@@ -1,0 +1,28 @@
+diff --git a/dist/config.js b/dist/config.js
+index 0000000..1111111 100644
+--- a/dist/config.js
++++ b/dist/config.js
+@@ -133,10 +133,19 @@ export function getChangelogPath() {
+     return resolve(join(getPackageDir(), "CHANGELOG.md"));
+ }
+ // =============================================================================
+-// App Config (from package.json piConfig)
++// App Config (embedded defaults; package.json optional)
+ // =============================================================================
+-const pkg = JSON.parse(readFileSync(getPackageJsonPath(), "utf-8"));
+-export const APP_NAME = pkg.piConfig?.name || "pi";
+-export const CONFIG_DIR_NAME = pkg.piConfig?.configDir || ".pi";
+-export const VERSION = pkg.version;
+const DEFAULT_APP_NAME = process.env.PI_APP_NAME || "hardshell";
++const DEFAULT_CONFIG_DIR_NAME = ".pi";
+const DEFAULT_VERSION = process.env.PI_VERSION || "0.1.0";
++const pkg = {
++    piConfig: {
++        name: DEFAULT_APP_NAME,
++        configDir: DEFAULT_CONFIG_DIR_NAME,
++    },
++    version: DEFAULT_VERSION,
++};
++export const APP_NAME = pkg.piConfig?.name || "pi";
++export const CONFIG_DIR_NAME = pkg.piConfig?.configDir || ".pi";
++export const VERSION = pkg.version;
