@@ -1,7 +1,12 @@
-import { resolve } from "node:path";
 import type { AgentSession } from "@mariozechner/pi-coding-agent";
 import envPaths from "env-paths";
 import { APP_NAME, type SessionMode } from "./config/appConst.ts";
+
+const resolvePath = (base: string, target: string) => {
+	const trimmedBase = base.replace(/[\\/]+$/, "");
+	const trimmedTarget = target.replace(/^[\\/]+/, "");
+	return `${trimmedBase}/${trimmedTarget}`;
+};
 
 const envPath = envPaths(APP_NAME);
 
@@ -28,9 +33,9 @@ export class Agent {
 	sessions = new Map<string, AgentSession>();
 
 	#id: string;
-	#sessionsFilePath = resolve(envPath.config, "sessions");
-	#scheduleFilePath = resolve(envPath.config, "schedule.json");
-	#memoryFilePath = resolve(envPath.config, "memory.md");
+	#sessionsFilePath = resolvePath(envPath.config, "sessions");
+	#scheduleFilePath = resolvePath(envPath.config, "schedule.json");
+	#memoryFilePath = resolvePath(envPath.config, "memory.md");
 
 	constructor({
 		name,

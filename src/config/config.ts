@@ -1,7 +1,14 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
-import process from "node:process";
 import type { PiDefaultsConfig, PiDefaultsOverrides } from "../types.ts";
+
+const resolvePath = (base: string, target: string): string => {
+	const isAbsolute = /^[A-Za-z]:[\\/]/.test(target) || target.startsWith("/");
+	if (isAbsolute) {
+		return target;
+	}
+	const trimmedBase = base.replace(/[\\/]+$/, "");
+	const trimmedTarget = target.replace(/^[\\/]+/, "");
+	return `${trimmedBase}/${trimmedTarget}`;
+};
 
 const DEFAULTS: PiDefaultsConfig = {
 	providers: {
@@ -54,13 +61,13 @@ const readOverrides = async (
 	overridesPath: string
 ): Promise<PiDefaultsOverrides | undefined> => {
 	try {
-		const raw = await readFile(overridesPath, "utf-8");
+		const raw = await Bun.file(overridesPath).text();
 		return JSON.parse(raw) as PiDefaultsOverrides;
 	} catch (error) {
 		const isNotFound =
 			error instanceof Error &&
 			"code" in error &&
-			(error as NodeJS.ErrnoException).code === "ENOENT";
+			(error as { code?: string }).code === "ENOENT";
 		if (isNotFound) {
 			return undefined;
 		}
@@ -74,8 +81,8 @@ export const getConfig = async (options?: {
 }): Promise<PiDefaultsConfig> => {
 	const cwd = options?.cwd ?? process.cwd();
 	const overridesPath = options?.overridesPath
-		? resolve(cwd, options.overridesPath)
-		: resolve(cwd, "pi.defaults.json");
+		? resolvePath(cwd, options.overridesPath)
+		: resolvePath(cwd, "pi.defaults.json");
 
 	const overrides = await readOverrides(overridesPath);
 	return mergeConfig(overrides);

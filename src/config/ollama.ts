@@ -1,27 +1,22 @@
-import { execFile, spawn } from "node:child_process";
-import { createInterface } from "node:readline/promises";
-import process from "node:process";
-import { promisify } from "node:util";
-
 import type { ModelConfig, ProviderConfig } from "../types.ts";
 
-const execFileAsync = promisify(execFile);
+const write = (text: string) => {
+	Bun.stdout.write(text);
+};
 
 const runWithInheritedStdio = async (
 	command: string,
 	args: string[],
 ): Promise<void> => {
-	await new Promise<void>((resolve, reject) => {
-		const child = spawn(command, args, { stdio: "inherit" });
-		child.on("error", reject);
-		child.on("close", (code) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				reject(new Error(`${command} exited with code ${code}`));
-			}
-		});
+	const proc = Bun.spawn([command, ...args], {
+		stdin: "inherit",
+		stdout: "inherit",
+		stderr: "inherit",
 	});
+	const exitCode = await proc.exited;
+	if (exitCode !== 0) {
+		throw new Error(`${command} exited with code ${exitCode}`);
+	}
 };
 
 export const ensureOllamaReady = async (
@@ -44,9 +39,9 @@ export const ensureOllamaReady = async (
 		if (!installOk) {
 			throw new Error("Ollama is required for this provider.");
 		}
-		process.stdout.write("Installing Ollama...\n");
+		write("Installing Ollama...\n");
 		await installOllama();
-		process.stdout.write("Ollama installed.\n");
+		write("Ollama installed.\n");
 	}
 
 	const modelId = models[0]?.id;
@@ -64,32 +59,19 @@ export const ensureOllamaReady = async (
 		if (!pullOk) {
 			throw new Error("Model download declined.");
 		}
-		process.stdout.write(`Pulling Ollama model: ${modelId}...\n`);
+		write(`Pulling Ollama model: ${modelId}...\n`);
 		await runWithInheritedStdio("ollama", ["pull", modelId]);
-		process.stdout.write(`Model pulled: ${modelId}.\n`);
+		write(`Model pulled: ${modelId}.\n`);
 	}
 };
 
 const confirmPrompt = async (message: string): Promise<boolean> => {
-	const rl = createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-	try {
-		const answer = await rl.question(`${message} (y/N) `);
-		return answer.trim().toLowerCase().startsWith("y");
-	} finally {
-		rl.close();
-	}
+	const answer = await readLine(`${message} (y/N) `);
+	return answer.trim().toLowerCase().startsWith("y");
 };
 
 const commandExists = async (command: string): Promise<boolean> => {
-	try {
-		await execFileAsync("/usr/bin/env", ["command", "-v", command]);
-		return true;
-	} catch {
-		return false;
-	}
+	return Boolean(Bun.which(command));
 };
 
 const installOllama = async (): Promise<void> => {
@@ -143,7 +125,15 @@ const installOllama = async (): Promise<void> => {
 
 const ollamaHasModel = async (modelId: string): Promise<boolean> => {
 	try {
-		const { stdout } = await execFileAsync("ollama", ["list"]);
+		const proc = Bun.spawn(["ollama", "list"], {
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const stdout = await new Response(proc.stdout).text();
+		const exitCode = await proc.exited;
+		if (exitCode !== 0) {
+			return false;
+		}
 		return stdout.split("\n").some((line) => line.startsWith(modelId));
 	} catch {
 		return false;
@@ -152,7 +142,15 @@ const ollamaHasModel = async (modelId: string): Promise<boolean> => {
 
 const ollamaModelSize = async (modelId: string): Promise<string | null> => {
 	try {
-		const { stdout } = await execFileAsync("ollama", ["show", modelId]);
+		const proc = Bun.spawn(["ollama", "show", modelId], {
+			stdout: "pipe",
+			stderr: "pipe",
+		});
+		const stdout = await new Response(proc.stdout).text();
+		const exitCode = await proc.exited;
+		if (exitCode !== 0) {
+			return null;
+		}
 		const sizeLine = stdout
 			.split("\n")
 			.find((line) => line.toLowerCase().startsWith("size:"));
@@ -163,5 +161,24 @@ const ollamaModelSize = async (modelId: string): Promise<string | null> => {
 		return size || null;
 	} catch {
 		return null;
+	}
+};
+
+const readLine = async (prompt: string): Promise<string> => {
+	write(prompt);
+	const reader = Bun.stdin.stream().getReader();
+	const decoder = new TextDecoder();
+	let buffer = "";
+	while (true) {
+		const { value, done } = await reader.read();
+		if (done) {
+			return buffer.trim();
+		}
+		buffer += decoder.decode(value, { stream: true });
+		const newlineIndex = buffer.indexOf("\n");
+		if (newlineIndex >= 0) {
+			const line = buffer.slice(0, newlineIndex).replace(/\r$/, "");
+			return line.trim();
+		}
 	}
 };
