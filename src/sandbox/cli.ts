@@ -43,7 +43,7 @@ type ParsedArgs = {
 const parseArgs = (argv: string[]): ParsedArgs => {
 	const args = [...argv];
 	const out: ParsedArgs = {
-		command: args.shift(),
+		command: undefined,
 		configPath: undefined,
 		profile: undefined,
 		configSource: undefined,
@@ -52,6 +52,12 @@ const parseArgs = (argv: string[]): ParsedArgs => {
 	while (args.length) {
 		const a = args.shift();
 		if (!a) break;
+		if (a === "init" || a === "install" || a === "launch") {
+			// First command token wins; everything else is treated as extra args.
+			if (!out.command) out.command = a;
+			else out.rest.push(a);
+			continue;
+		}
 		if (a === "--help" || a === "-h") {
 			out.rest.push(a);
 			continue;
@@ -101,8 +107,10 @@ const resolveConfigForLaunch = (parsed: ParsedArgs): string | null => {
 
 const main = async () => {
 	const parsed = parseArgs(process.argv.slice(2));
+	// If no explicit command is provided, default to `launch`.
+	// This matches the desired UX: run the wrapper binary to run the sandbox.
+	if (!parsed.command) parsed.command = "launch";
 	if (
-		!parsed.command ||
 		parsed.command === "--help" ||
 		parsed.command === "-h" ||
 		parsed.rest.includes("--help") ||

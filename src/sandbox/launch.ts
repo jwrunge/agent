@@ -1,8 +1,9 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { parseSandboxConfig } from "./config.ts";
+import { installCommand } from "./install.ts";
 import { readJsonFile } from "./io.ts";
 import { ensureDirExists, toAbsoluteRealPath } from "./paths.ts";
 import { isWindows } from "./platform.ts";
@@ -32,10 +33,15 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 	const config = parseSandboxConfig(raw);
 
 	const preferred = process.env.AGENT_CONTAINER_RUNTIME;
-	const runtime = detectRuntime(preferred);
+	let runtime = detectRuntime(preferred);
 	if (!runtime) {
-		console.error("No container runtime found. Run: pi-agent-sandbox install");
-		process.exit(1);
+		console.log("No container runtime detected. Running installer...");
+		await installCommand({ rest: [] });
+		runtime = detectRuntime(preferred);
+		if (!runtime) {
+			console.error("No container runtime found after install.");
+			process.exit(1);
+		}
 	}
 
 	const imageName = config.image.name;
@@ -55,7 +61,8 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 		buildImage(runtime, imageName, dockerfile, context);
 	}
 
-	const runArgs: string[] = ["run", "--rm"];
+	const containerName = `pi-agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+	const runArgs: string[] = ["run", "--rm", "--name", containerName];
 
 	const c = config.container;
 	if (c.interactive !== false) add(runArgs, "-i");
@@ -101,6 +108,27 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 
 	add(runArgs, imageName);
 
+	let cleanedUp = false;
+	const cleanup = () => {
+		if (cleanedUp) return;
+		cleanedUp = true;
+		// On normal exit, `--rm` handles cleanup. This is a safety net for signals/crashes.
+		spawnSync(runtime, ["rm", "-f", containerName], { stdio: "ignore" });
+	};
+
+	process.on("SIGINT", () => {
+		cleanup();
+		process.exit(130);
+	});
+	process.on("SIGTERM", () => {
+		cleanup();
+		process.exit(143);
+	});
+	process.on("exit", () => cleanup());
+
 	const child = spawn(runtime, runArgs, { stdio: "inherit" });
-	child.on("exit", (code) => process.exit(code ?? 1));
+	child.on("exit", (code) => {
+		cleanup();
+		process.exit(code ?? 1);
+	});
 };

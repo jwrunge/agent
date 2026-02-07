@@ -1,17 +1,14 @@
 {
-  "name": "pi-agent-bun",
+  "name": "hardshell",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "bun run src/run-workflow.ts",
-    "compile": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun",
-    "sandbox:install": "bun run src/sandbox/cli.ts install",
-    "sandbox:launch": "bun run src/sandbox/cli.ts launch",
-    "sandbox:init": "bun run src/sandbox/cli.ts init",
-    "sandbox:init:local": "bun run src/sandbox/cli.ts init --local",
-    "sandbox:compile": "bun build --compile src/sandbox/cli.ts --outfile dist/pi-agent-sandbox",
-    "container:build": "docker build -t pi-agent-bun:local -f container/Dockerfile .",
+    "dev:sandbox": "bun run src/sandbox/cli.ts launch --config agent-sandbox.dev.json",
+    "compile:agent": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun",
+    "compile:sandbox": "bun build --compile src/sandbox/cli.ts --outfile dist/pi-agent-sandbox",
+    "compile": "bun run compile:agent && bun run compile:sandbox",
     "postinstall": "bun scripts/patch-pi-config.ts"
   },
   "dependencies": {

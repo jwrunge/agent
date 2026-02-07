@@ -1,18 +1,17 @@
-# Minimal container image for running the agent workflow under Bun.
+# Minimal container image for running the agent workflow.
 # This is intentionally Linux-only; macOS/Windows run it via a Linux VM layer.
 
-FROM oven/bun:1.2.2
+# Builder stage: compile the agent to a Linux binary.
+FROM oven/bun:1.2.2 AS build
 
 WORKDIR /app
 
-# Install minimal tooling commonly needed by coding agents.
+# Install minimal tooling commonly needed by coding agents at runtime.
+# We install it here so we can reuse package caching layers.
 USER root
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends git ca-certificates \
 	&& rm -rf /var/lib/apt/lists/*
-
-RUN mkdir -p /workspace /app \
-	&& chown -R bun:bun /workspace /app
 
 USER bun
 
@@ -21,9 +20,24 @@ COPY package.json bun.lock tsconfig.json ./
 COPY src ./src
 COPY scripts ./scripts
 
-# Patch pi config (postinstall) and install deps.
 RUN bun install --production
 
-# Default: run the interactive workflow.
+# Compile to a Linux binary inside the Linux builder image.
+RUN bun build --compile src/run-workflow.ts --outfile /out/pi-agent
+
+# Runtime stage: no Bun needed.
+FROM debian:bookworm-slim
+
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends ca-certificates git \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 10001 agent \
+	&& mkdir -p /workspace /app \
+	&& chown -R agent:agent /workspace /app
+
+COPY --from=build /out/pi-agent /app/pi-agent
+
+USER agent
 WORKDIR /workspace
-CMD ["bun", "run", "/app/src/run-workflow.ts"]
+CMD ["/app/pi-agent"]

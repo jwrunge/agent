@@ -9,6 +9,11 @@ type ParsedArgs = {
 	rest: string[];
 };
 
+const canRun = (cmd: string, args: string[]) => {
+	const res = spawnSync(cmd, args, { stdio: "ignore" });
+	return res.status === 0;
+};
+
 const run = (cmd: string, args: string[]) => {
 	const res = spawnSync(cmd, args, { stdio: "inherit" });
 	return res.status === 0;
@@ -39,6 +44,18 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 	const runtime = detectRuntime(preferred);
 	if (runtime) {
 		console.log(`Container runtime detected: ${runtime}`);
+		if (runtime === "docker" && isMac() && !canRun("docker", ["buildx", "version"])) {
+			console.log("Docker buildx not detected.");
+			const hasBrew = run("brew", ["--version"]);
+			if (hasBrew) {
+				const ok = await promptYesNo(
+					"Install docker-buildx via brew to enable BuildKit builds? (y/N) ",
+				);
+				if (ok) {
+					run("brew", ["install", "docker-buildx"]);
+				}
+			}
+		}
 		return;
 	}
 
@@ -66,6 +83,8 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 		if (!run("brew", ["install", "colima", "docker"])) {
 			process.exit(1);
 		}
+		// BuildKit/buildx avoids the legacy builder deprecation warning.
+		run("brew", ["install", "docker-buildx"]);
 		console.log("Starting Colima...");
 		run("colima", ["start"]);
 		console.log("Done. You should now have a working `docker` CLI.");

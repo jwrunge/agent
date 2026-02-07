@@ -7,6 +7,8 @@ const canRun = (cmd: string, args: string[] = []): boolean => {
 	return res.status === 0;
 };
 
+const hasDockerBuildx = (): boolean => canRun("docker", ["buildx", "version"]);
+
 export const detectRuntime = (preferred?: string): ContainerRuntime | null => {
 	const normalized = preferred?.trim();
 	if (normalized === "docker" && canRun("docker", ["version"])) return "docker";
@@ -29,11 +31,18 @@ export const buildImage = (
 	dockerfile: string,
 	context: string,
 ): void => {
-	const res = spawnSync(
-		runtime,
-		["build", "-t", image, "-f", dockerfile, context],
-		{ stdio: "inherit" },
-	);
+	const res =
+		runtime === "docker" && hasDockerBuildx()
+			? spawnSync(
+				"docker",
+				["buildx", "build", "--load", "-t", image, "-f", dockerfile, context],
+				{ stdio: "inherit" },
+			)
+			: spawnSync(
+				runtime,
+				["build", "-t", image, "-f", dockerfile, context],
+				{ stdio: "inherit" },
+			);
 	if (res.status !== 0) {
 		throw new Error(`${runtime} build failed with exit code ${res.status}`);
 	}

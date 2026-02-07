@@ -1,0 +1,25 @@
+# Dev container image for running the agent workflow under Bun (not compiled).
+# Use this for iterative development; production should use container/Dockerfile.
+
+FROM oven/bun:1.2.2
+
+WORKDIR /app
+
+USER root
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends git ca-certificates \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /workspace /app \
+	&& chown -R bun:bun /workspace /app
+
+USER bun
+
+COPY package.json bun.lock tsconfig.json ./
+COPY src ./src
+COPY scripts ./scripts
+
+RUN bun install
+
+WORKDIR /workspace
+CMD ["bun", "run", "/app/src/run-workflow.ts"]
