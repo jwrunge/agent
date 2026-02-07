@@ -1,7 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-
+import { resolveAppDir } from "./appdir.ts";
 import { parseSandboxConfig } from "./config.ts";
 import { installCommand } from "./install.ts";
 import { readJsonFile } from "./io.ts";
@@ -51,10 +51,14 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 			console.error(`Image not found: ${imageName}`);
 			process.exit(1);
 		}
-		const dockerfile = resolve(process.cwd(), build.dockerfile);
-		const context = resolve(process.cwd(), build.context);
+		const appDir = resolveAppDir();
+		const dockerfile = resolve(appDir, build.dockerfile);
+		const context = resolve(appDir, build.context);
 		if (!existsSync(dockerfile)) {
 			console.error(`Dockerfile not found: ${dockerfile}`);
+			console.error(
+				"If you installed via GitHub Releases, ensure the app bundle is installed (or set HARDSHELL_APP_DIR).",
+			);
 			process.exit(1);
 		}
 		console.log(`Building image ${imageName} using ${runtime}...`);

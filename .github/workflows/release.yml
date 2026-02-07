@@ -1,0 +1,113 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-wrapper:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            out: pi-agent-sandbox-linux-x64
+          - os: macos-latest
+            platform: darwin-arm64
+            out: pi-agent-sandbox-darwin-arm64
+          - os: windows-latest
+            platform: win32-x64
+            out: pi-agent-sandbox-win32-x64.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.2"
+
+      - name: Install deps
+        run: bun install
+
+      - name: Compile wrapper
+        run: bun run compile:sandbox
+
+      - name: Rename artifact (unix)
+        if: runner.os != 'Windows'
+        run: |
+          mv dist/pi-agent-sandbox "${{ matrix.out }}"
+
+      - name: Rename artifact (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Move-Item -Force dist/pi-agent-sandbox.exe "${{ matrix.out }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: ${{ matrix.out }}
+          if-no-files-found: error
+
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create app bundle
+        run: |
+          set -eu
+          mkdir -p _bundle
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude 'output' \
+            --exclude '.DS_Store' \
+            --exclude '.env' \
+            --exclude 'packages' \
+            --exclude '.github' \
+            ./ _bundle/
+          tar -czf hardshell-app-bundle.tar.gz -C _bundle .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle
+          path: hardshell-app-bundle.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: [build-wrapper, bundle]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: _dist
+
+      - name: Flatten artifacts
+        run: |
+          set -eu
+          mkdir -p dist
+          find _dist -type f -maxdepth 2 -print -exec mv {} dist/ \;
+
+      - name: Checksums
+        run: |
+          set -eu
+          cd dist
+          sha256sum * > sha256sums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+          generate_release_notes: true

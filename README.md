@@ -40,6 +40,22 @@ The wrapper is compiled to a standalone binary:
 
    dist/pi-agent-sandbox
 
+#### Install via GitHub Releases
+
+- macOS/Linux (POSIX shell):
+
+   curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/scripts/install.sh | sh -s -- --repo <owner>/<repo>
+
+- Windows (PowerShell):
+
+   iwr https://raw.githubusercontent.com/<owner>/<repo>/main/scripts/install.ps1 -UseBasicParsing | iex; install.ps1 -Repo <owner>/<repo>
+
+The installer:
+- installs the wrapper binary to `~/.local/bin` (default)
+- installs the “app bundle” (Dockerfile + build context) to a per-user data directory
+
+The wrapper will look for the app bundle in that location automatically, or you can override with `HARDSHELL_APP_DIR`.
+
 End users only need a container runtime (Docker/Podman; on macOS we use Colima). On first run, the wrapper will:
 - prompt to install prerequisites if missing
 - create a default per-user sandbox config if none exists

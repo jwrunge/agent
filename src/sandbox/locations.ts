@@ -15,6 +15,11 @@ export const getUserSandboxDir = (): string => {
 	return join(paths.config, "sandbox");
 };
 
+export const getUserAppDir = (): string => {
+	const paths = envPaths(APP_NAME);
+	return join(paths.data, "app");
+};
+
 export const getUserConfigPath = (profile?: string): string => {
 	if (!profile) return join(getUserSandboxDir(), "agent-sandbox.json");
 	return join(getUserSandboxDir(), "profiles", `${profile}.json`);
