@@ -131,7 +131,7 @@ const main = async () => {
 		return;
 	}
 	if (parsed.command === "launch") {
-		const configPath = resolveConfigForLaunch(parsed);
+		let configPath = resolveConfigForLaunch(parsed);
 		if (!configPath) {
 			console.error("No sandbox config found.");
 			console.error("Searched:");
@@ -143,16 +143,12 @@ const main = async () => {
 				console.error(`  - ${getUserConfigPath()}`);
 			}
 			const ok = await promptYesNo(
-				"Create a per-user sandbox config now? (y/N) ",
+				"Create a per-user sandbox config and continue? (Y/n) ",
 			);
 			if (!ok) process.exit(1);
-			const targetPath = initConfig({
-				profile: parsed.profile,
-				source: "user",
-			});
-			console.log(`Created: ${targetPath}`);
-			console.log("Edit it, then rerun launch.");
-			process.exit(1);
+			configPath = initConfig({ profile: parsed.profile, source: "user" });
+			console.log(`Created: ${configPath}`);
+			console.log("Continuing with default config (edit it later to tighten permissions).");
 		}
 
 		await launchCommand({ ...parsed, configPath });

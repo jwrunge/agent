@@ -34,19 +34,23 @@ bun run compile
 
 This repo includes a lightweight wrapper that runs the agent inside an OCI container with a declarative `agent-sandbox.json` config (bind mounts + read-only rootfs + optional offline networking).
 
-1) Run the sandboxed dev environment:
+### End-user usage (no Bun/Node/npm required)
+
+The wrapper is compiled to a standalone binary:
+
+   dist/pi-agent-sandbox
+
+End users only need a container runtime (Docker/Podman; on macOS we use Colima). On first run, the wrapper will:
+- prompt to install prerequisites if missing
+- create a default per-user sandbox config if none exists
+- build the container image if missing
+- run the agent container and clean it up when the wrapper exits
+
+### Development usage
+
+Run the sandboxed dev environment (uses [agent-sandbox.dev.json](agent-sandbox.dev.json)):
 
    bun run dev:sandbox
-
-This uses [agent-sandbox.dev.json](agent-sandbox.dev.json) (dev-oriented defaults).
-
-2) (Optional) Create/install sandbox config + prerequisites:
-
-The sandbox wrapper itself lives at [src/sandbox/cli.ts](src/sandbox/cli.ts). For now, run it directly via bun:
-
-   bun run src/sandbox/cli.ts init
-   bun run src/sandbox/cli.ts install
-   bun run src/sandbox/cli.ts launch
 
 Profiles:
 - Use `--profile <name>` to load `agent-sandbox.<name>.json` (local) or `<userConfig>/sandbox/profiles/<name>.json` (per-user).

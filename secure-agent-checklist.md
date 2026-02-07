@@ -167,11 +167,12 @@ This does **not** provide the same security as kernel enforcement, but reduces a
 
 ## 11) Distribution
 
-- [ ] Build a single binary with `bun build --compile`.
-- [ ] Distribute:
-  - [ ] The agent binary.
-  - [ ] `agent-permissions.json` template.
-  - [ ] Clear README: how to tighten permissions; how to enable network.
+- [ ] Build a single wrapper binary with `bun build --compile`.
+- [ ] If using the “local-build image” model (Model A): distribute the wrapper binary **plus** the container build inputs it needs (e.g., Dockerfile + build context).
+- [ ] End-user host dependencies should be minimal:
+  - [ ] Container runtime only (Docker/Podman; plus Colima/WSL2 VM layer where needed).
+  - [ ] No Bun/Node/npm required on the host.
+  - [ ] Note: Bun/Node toolchains may still be used during image build (e.g. in a builder stage) or for development tooling.
 - [ ] On first run, print:
   - [ ] Backend selected (container/soft).
   - [ ] Whether user config expanded or only restricted.
