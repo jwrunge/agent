@@ -1,24 +1,42 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-
+import { initConfig } from "./init.ts";
 import { installCommand } from "./install.ts";
 import { launchCommand } from "./launch.ts";
+import {
+	getLocalConfigPath,
+	getUserConfigPath,
+	type SandboxConfigSource,
+} from "./locations.ts";
+import { promptYesNo } from "./prompts.ts";
 
 const usage = () => {
 	console.log("pi-agent-sandbox <command> [options]");
 	console.log("");
 	console.log("Commands:");
+	console.log("  init      Create a sandbox config (local or per-user)");
 	console.log("  install   Check/install container prerequisites");
 	console.log("  launch    Launch agent in container using sandbox config");
 	console.log("");
 	console.log("Global options:");
-	console.log("  --config <path>   Sandbox config (default: ./agent-sandbox.json)");
+	console.log(
+		"  --profile <name>  Use named profile (agent-sandbox.<name>.json)",
+	);
+	console.log("  --config <path>   Explicit sandbox config path");
+	console.log(
+		"  --local           For init: write config to current directory",
+	);
+	console.log(
+		"  --user            For init: write config to per-user config dir (default)",
+	);
 	console.log("  --help");
 };
 
 type ParsedArgs = {
 	command?: string;
-	configPath: string;
+	configPath?: string;
+	profile?: string;
+	configSource?: SandboxConfigSource;
 	rest: string[];
 };
 
@@ -26,7 +44,9 @@ const parseArgs = (argv: string[]): ParsedArgs => {
 	const args = [...argv];
 	const out: ParsedArgs = {
 		command: args.shift(),
-		configPath: resolve(process.cwd(), "agent-sandbox.json"),
+		configPath: undefined,
+		profile: undefined,
+		configSource: undefined,
 		rest: [],
 	};
 	while (args.length) {
@@ -42,9 +62,41 @@ const parseArgs = (argv: string[]): ParsedArgs => {
 			out.configPath = resolve(process.cwd(), v);
 			continue;
 		}
+		if (a === "--profile") {
+			const v = args.shift();
+			if (!v) throw new Error("--profile requires a value");
+			out.profile = v;
+			continue;
+		}
+		if (a === "--local") {
+			out.configSource = "local";
+			continue;
+		}
+		if (a === "--user") {
+			out.configSource = "user";
+			continue;
+		}
 		out.rest.push(a);
 	}
 	return out;
+};
+
+const resolveConfigForLaunch = (parsed: ParsedArgs): string | null => {
+	if (parsed.configPath) return parsed.configPath;
+
+	if (parsed.profile) {
+		const localProfile = getLocalConfigPath(parsed.profile);
+		if (existsSync(localProfile)) return localProfile;
+		const userProfile = getUserConfigPath(parsed.profile);
+		if (existsSync(userProfile)) return userProfile;
+		return null;
+	}
+
+	const localDefault = getLocalConfigPath();
+	if (existsSync(localDefault)) return localDefault;
+	const userDefault = getUserConfigPath();
+	if (existsSync(userDefault)) return userDefault;
+	return null;
 };
 
 const main = async () => {
@@ -61,24 +113,41 @@ const main = async () => {
 	}
 
 	if (parsed.command === "install") {
-		await installCommand(parsed);
+		await installCommand({ rest: parsed.rest, configPath: parsed.configPath });
+		return;
+	}
+	if (parsed.command === "init") {
+		const source = parsed.configSource ?? "user";
+		const targetPath = initConfig({ profile: parsed.profile, source });
+		console.log(`Wrote sandbox config: ${targetPath}`);
 		return;
 	}
 	if (parsed.command === "launch") {
-		// Help users by auto-finding an example config.
-		if (!existsSync(parsed.configPath)) {
-			const example = resolve(process.cwd(), "agent-sandbox.example.json");
-			if (existsSync(example)) {
-				console.error(
-					`Config not found at ${parsed.configPath}. Copy ${example} to agent-sandbox.json and edit it.`,
-				);
+		const configPath = resolveConfigForLaunch(parsed);
+		if (!configPath) {
+			console.error("No sandbox config found.");
+			console.error("Searched:");
+			if (parsed.profile) {
+				console.error(`  - ${getLocalConfigPath(parsed.profile)}`);
+				console.error(`  - ${getUserConfigPath(parsed.profile)}`);
 			} else {
-				console.error(`Config not found at ${parsed.configPath}.`);
+				console.error(`  - ${getLocalConfigPath()}`);
+				console.error(`  - ${getUserConfigPath()}`);
 			}
+			const ok = await promptYesNo(
+				"Create a per-user sandbox config now? (y/N) ",
+			);
+			if (!ok) process.exit(1);
+			const targetPath = initConfig({
+				profile: parsed.profile,
+				source: "user",
+			});
+			console.log(`Created: ${targetPath}`);
+			console.log("Edit it, then rerun launch.");
 			process.exit(1);
 		}
 
-		await launchCommand(parsed);
+		await launchCommand({ ...parsed, configPath });
 		return;
 	}
 

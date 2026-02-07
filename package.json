@@ -8,7 +8,8 @@
     "compile": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun",
     "sandbox:install": "bun run src/sandbox/cli.ts install",
     "sandbox:launch": "bun run src/sandbox/cli.ts launch",
-    "sandbox:init": "cp -n agent-sandbox.example.json agent-sandbox.json || true",
+    "sandbox:init": "bun run src/sandbox/cli.ts init",
+    "sandbox:init:local": "bun run src/sandbox/cli.ts init --local",
     "sandbox:compile": "bun build --compile src/sandbox/cli.ts --outfile dist/pi-agent-sandbox",
     "container:build": "docker build -t pi-agent-bun:local -f container/Dockerfile .",
     "postinstall": "bun scripts/patch-pi-config.ts"

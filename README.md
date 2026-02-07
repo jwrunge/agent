@@ -34,9 +34,14 @@ bun run compile
 
 This repo includes a lightweight wrapper that runs the agent inside an OCI container with a declarative `agent-sandbox.json` config (bind mounts + read-only rootfs + optional offline networking).
 
-1) Create your sandbox config:
+1) Create your sandbox config (per-user by default):
 
    bun run sandbox:init
+
+   - Writes to your per-user config directory (via `env-paths`) so you don’t need a config in every project.
+   - If you prefer a project-local config, use:
+
+     bun run sandbox:init:local
 
 2) Install/check prerequisites:
 
@@ -49,6 +54,9 @@ This repo includes a lightweight wrapper that runs the agent inside an OCI conta
 3) Launch:
 
    bun run sandbox:launch
+
+Profiles:
+- Use `--profile <name>` to load `agent-sandbox.<name>.json` (local) or `<userConfig>/sandbox/profiles/<name>.json` (per-user).
 
 Edit `agent-sandbox.json` to control what host paths are mounted read-only / read-write.
 

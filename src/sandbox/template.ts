@@ -1,0 +1,47 @@
+import type { SandboxConfig } from "./config.ts";
+
+export const defaultSandboxConfig = (): SandboxConfig => ({
+	version: 1,
+	image: {
+		name: "pi-agent-bun:local",
+		build: {
+			context: ".",
+			dockerfile: "container/Dockerfile",
+			buildIfMissing: true,
+		},
+	},
+	container: {
+		workdir: "/workspace",
+		readOnlyRootFs: true,
+		interactive: true,
+		tty: true,
+		tmpfs: ["/tmp"],
+		resources: {
+			memory: "2g",
+			cpus: 2,
+			pidsLimit: 256,
+		},
+		network: {
+			mode: "none",
+		},
+	},
+	mounts: [
+		{
+			source: ".",
+			target: "/workspace",
+			mode: "ro",
+		},
+		{
+			source: "./output",
+			target: "/workspace/output",
+			mode: "rw",
+			createIfMissing: true,
+		},
+	],
+	env: {
+		passThrough: ["ANTHROPIC_API_KEY", "OPENAI_API_KEY", "OLLAMA_HOST"],
+		set: {
+			NODE_ENV: "production",
+		},
+	},
+});

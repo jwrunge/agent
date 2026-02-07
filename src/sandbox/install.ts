@@ -1,19 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { createInterface } from "node:readline";
 
 import { isLinux, isMac, isWindows, isWsl } from "./platform.ts";
+import { promptYesNo } from "./prompts.ts";
 import { detectRuntime } from "./runtime.ts";
 
 type ParsedArgs = {
-	configPath: string;
+	configPath?: string;
 	rest: string[];
-};
-
-const promptYesNo = async (question: string): Promise<boolean> => {
-	const rl = createInterface({ input: process.stdin, output: process.stdout });
-	const answer = await new Promise<string>((resolve) => rl.question(question, resolve));
-	rl.close();
-	return /^y(es)?$/i.test(answer.trim());
 };
 
 const run = (cmd: string, args: string[]) => {
@@ -27,8 +20,12 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 	if (isWindows()) {
 		console.error("Windows detected.");
 		console.error("This project requires WSL2 for the container sandbox.");
-		console.error("Install WSL2 + a Linux distro (Ubuntu), then run this tool inside WSL.");
-		const ok = await promptYesNo("Open WSL install docs in your browser? (y/N) ");
+		console.error(
+			"Install WSL2 + a Linux distro (Ubuntu), then run this tool inside WSL.",
+		);
+		const ok = await promptYesNo(
+			"Open WSL install docs in your browser? (y/N) ",
+		);
 		if (ok) {
 			console.error("Docs: https://learn.microsoft.com/windows/wsl/install");
 		}
@@ -56,9 +53,13 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 			process.exit(1);
 		}
 
-		const yes = await promptYesNo("Install Docker CLI + Colima via brew now? (y/N) ");
+		const yes = await promptYesNo(
+			"Install Docker CLI + Colima via brew now? (y/N) ",
+		);
 		if (!yes) {
-			console.error("Declined. Please install prerequisites and rerun: pi-agent-sandbox install");
+			console.error(
+				"Declined. Please install prerequisites and rerun: pi-agent-sandbox install",
+			);
 			process.exit(1);
 		}
 
