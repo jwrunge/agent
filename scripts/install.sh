@@ -80,9 +80,9 @@ default_app_dir() {
   # The wrapper can also be pointed at a custom dir via HARDSHELL_APP_DIR.
   OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
   if [ "$OS" = "darwin" ]; then
-    echo "${HOME}/Library/Application Support/hardshell/app"
+    echo "${HOME}/Library/Application Support/hardshell-nodejs/app"
   else
-    echo "${XDG_DATA_HOME:-${HOME}/.local/share}/hardshell/app"
+    echo "${XDG_DATA_HOME:-${HOME}/.local/share}/hardshell-nodejs/app"
   fi
 }
 
@@ -138,7 +138,7 @@ main() {
 
   # Install/update bundle
   echo "Installing app bundle to: ${APP_DIR}"
-  tar -xzf "${TMP}/${BUNDLE_NAME}" -C "${APP_DIR}" --strip-components=1
+  tar -xzf "${TMP}/${BUNDLE_NAME}" -C "${APP_DIR}"
 
   cat <<EOF
 

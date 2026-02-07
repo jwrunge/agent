@@ -1,12 +1,17 @@
 import type { SandboxConfig } from "./config.ts";
 
+const env = (key: string): string | undefined => {
+	const v = process.env[key];
+	return typeof v === "string" && v.trim() ? v : undefined;
+};
+
 export const defaultSandboxConfig = (): SandboxConfig => ({
 	version: 1,
 	image: {
-		name: "pi-agent-bun:local",
+		name: env("SANDBOX_DEFAULT_IMAGE_NAME") ?? "sandbox:local",
 		build: {
-			context: ".",
-			dockerfile: "container/Dockerfile",
+			context: env("SANDBOX_DEFAULT_BUILD_CONTEXT") ?? ".",
+			dockerfile: env("SANDBOX_DEFAULT_DOCKERFILE") ?? "container/Dockerfile",
 			buildIfMissing: true,
 		},
 	},

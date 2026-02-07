@@ -17,6 +17,7 @@ USER bun
 
 # Install deps first for better caching.
 COPY package.json bun.lock tsconfig.json ./
+COPY packages ./packages
 COPY src ./src
 COPY scripts ./scripts
 

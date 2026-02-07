@@ -2,7 +2,7 @@ Param(
   [Parameter(Mandatory=$true)][string]$Repo,
   [string]$Version = "latest",
   [string]$BinDir = "$env:USERPROFILE\\.local\\bin",
-  [string]$AppDir = "$env:LOCALAPPDATA\\hardshell\\app"
+  [string]$AppDir = "$env:LOCALAPPDATA\\hardshell-nodejs\\app"
 )
 
 $ErrorActionPreference = "Stop"

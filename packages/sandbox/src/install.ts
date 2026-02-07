@@ -20,14 +20,13 @@ const run = (cmd: string, args: string[]) => {
 };
 
 export const installCommand = async (_args: ParsedArgs): Promise<void> => {
-	const preferred = process.env.AGENT_CONTAINER_RUNTIME;
+	const preferred =
+		process.env.SANDBOX_CONTAINER_RUNTIME ?? process.env.AGENT_CONTAINER_RUNTIME;
 
 	if (isWindows()) {
 		console.error("Windows detected.");
-		console.error("This project requires WSL2 for the container sandbox.");
-		console.error(
-			"Install WSL2 + a Linux distro (Ubuntu), then run this tool inside WSL.",
-		);
+		console.error("This sandbox requires WSL2 for the container runtime.");
+		console.error("Install WSL2 + a Linux distro (Ubuntu), then rerun inside WSL.");
 		const ok = await promptYesNo(
 			"Open WSL install docs in your browser? (y/N) ",
 		);
@@ -44,7 +43,11 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 	const runtime = detectRuntime(preferred);
 	if (runtime) {
 		console.log(`Container runtime detected: ${runtime}`);
-		if (runtime === "docker" && isMac() && !canRun("docker", ["buildx", "version"])) {
+		if (
+			runtime === "docker" &&
+			isMac() &&
+			!canRun("docker", ["buildx", "version"])
+		) {
 			console.log("Docker buildx not detected.");
 			const hasBrew = run("brew", ["--version"]);
 			if (hasBrew) {
@@ -75,7 +78,7 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 		);
 		if (!yes) {
 			console.error(
-				"Declined. Please install prerequisites and rerun: pi-agent-sandbox install",
+				"Declined. Please install prerequisites and rerun: sandbox install",
 			);
 			process.exit(1);
 		}
@@ -83,7 +86,6 @@ export const installCommand = async (_args: ParsedArgs): Promise<void> => {
 		if (!run("brew", ["install", "colima", "docker"])) {
 			process.exit(1);
 		}
-		// BuildKit/buildx avoids the legacy builder deprecation warning.
 		run("brew", ["install", "docker-buildx"]);
 		console.log("Starting Colima...");
 		run("colima", ["start"]);

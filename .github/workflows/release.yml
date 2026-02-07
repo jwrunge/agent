@@ -74,7 +74,6 @@ jobs:
             --exclude 'output' \
             --exclude '.DS_Store' \
             --exclude '.env' \
-            --exclude 'packages' \
             --exclude '.github' \
             ./ _bundle/
           tar -czf hardshell-app-bundle.tar.gz -C _bundle .

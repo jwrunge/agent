@@ -6,7 +6,6 @@ export const toAbsoluteRealPath = (inputPath: string): string => {
 	try {
 		return realpathSync.native(abs);
 	} catch {
-		// If it doesn't exist yet, we still normalize to an absolute path.
 		return abs;
 	}
 };

@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "bun run src/run-workflow.ts",
-    "dev:sandbox": "bun run src/sandbox/cli.ts launch --config agent-sandbox.dev.json",
+    "dev:sandbox": "bun run src/sandbox-cli.ts launch --config agent-sandbox.dev.json",
     "compile:agent": "bun build --compile src/run-workflow.ts --outfile dist/pi-agent-bun",
-    "compile:sandbox": "bun build --compile src/sandbox/cli.ts --outfile dist/pi-agent-sandbox",
+    "compile:sandbox": "bun build --compile src/sandbox-cli.ts --outfile dist/pi-agent-sandbox",
     "compile": "bun run compile:agent && bun run compile:sandbox",
     "postinstall": "bun scripts/patch-pi-config.ts"
   },
   "dependencies": {
+    "@hardshell/sandbox": "file:./packages/sandbox",
     "@mariozechner/pi-coding-agent": "^0.51.6",
     "@sinclair/typebox": "^0.34.4",
     "dotenv": "^16.4.5",

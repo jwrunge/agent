@@ -8,10 +8,12 @@ import { readJsonFile } from "./io.ts";
 import { ensureDirExists, toAbsoluteRealPath } from "./paths.ts";
 import { isWindows } from "./platform.ts";
 import { buildImage, detectRuntime, imageExists } from "./runtime.ts";
+import type { SandboxNames } from "./locations.ts";
 
 type ParsedArgs = {
 	configPath: string;
 	rest: string[];
+	names: SandboxNames;
 };
 
 const add = (args: string[], ...more: string[]) => {
@@ -19,20 +21,20 @@ const add = (args: string[], ...more: string[]) => {
 };
 
 const mountArg = (source: string, target: string, mode: "ro" | "rw") => {
-	// Both docker and podman accept the short -v syntax.
 	return ["-v", `${source}:${target}:${mode}`];
 };
 
 export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 	if (isWindows()) {
-		console.error("Run this launcher inside WSL2 (Linux).");
+		console.error("Run this launcher inside WSL2 (Linux).\n");
 		process.exit(1);
 	}
 
 	const raw = readJsonFile(args.configPath);
 	const config = parseSandboxConfig(raw);
 
-	const preferred = process.env.AGENT_CONTAINER_RUNTIME;
+	const preferred =
+		process.env.SANDBOX_CONTAINER_RUNTIME ?? process.env.AGENT_CONTAINER_RUNTIME;
 	let runtime = detectRuntime(preferred);
 	if (!runtime) {
 		console.log("No container runtime detected. Running installer...");
@@ -51,13 +53,13 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 			console.error(`Image not found: ${imageName}`);
 			process.exit(1);
 		}
-		const appDir = resolveAppDir();
+		const appDir = resolveAppDir(args.names);
 		const dockerfile = resolve(appDir, build.dockerfile);
 		const context = resolve(appDir, build.context);
 		if (!existsSync(dockerfile)) {
 			console.error(`Dockerfile not found: ${dockerfile}`);
 			console.error(
-				"If you installed via GitHub Releases, ensure the app bundle is installed (or set HARDSHELL_APP_DIR).",
+				"If you installed via GitHub Releases, ensure the app bundle is installed (or set SANDBOX_APP_DIR).",
 			);
 			process.exit(1);
 		}
@@ -65,7 +67,7 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 		buildImage(runtime, imageName, dockerfile, context);
 	}
 
-	const containerName = `pi-agent-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+	const containerName = `sandbox-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 	const runArgs: string[] = ["run", "--rm", "--name", containerName];
 
 	const c = config.container;
@@ -81,8 +83,7 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 	}
 
 	if (c.resources?.memory) add(runArgs, "--memory", c.resources.memory);
-	if (typeof c.resources?.cpus === "number")
-		add(runArgs, "--cpus", String(c.resources.cpus));
+	if (typeof c.resources?.cpus === "number") add(runArgs, "--cpus", String(c.resources.cpus));
 	if (typeof c.resources?.pidsLimit === "number")
 		add(runArgs, "--pids-limit", String(c.resources.pidsLimit));
 
@@ -92,14 +93,12 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 	const workdir = c.workdir ?? "/workspace";
 	add(runArgs, "-w", workdir);
 
-	// Mounts
 	for (const m of config.mounts) {
 		const srcAbs = toAbsoluteRealPath(m.source);
 		if (m.createIfMissing) ensureDirExists(srcAbs);
 		add(runArgs, ...mountArg(srcAbs, m.target, m.mode));
 	}
 
-	// Env
 	for (const key of config.env?.passThrough ?? []) {
 		const val = process.env[key];
 		if (typeof val === "string") {
@@ -116,7 +115,6 @@ export const launchCommand = async (args: ParsedArgs): Promise<void> => {
 	const cleanup = () => {
 		if (cleanedUp) return;
 		cleanedUp = true;
-		// On normal exit, `--rm` handles cleanup. This is a safety net for signals/crashes.
 		spawnSync(runtime, ["rm", "-f", containerName], { stdio: "ignore" });
 	};
 

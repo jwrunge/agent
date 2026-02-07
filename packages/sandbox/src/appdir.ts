@@ -1,23 +1,24 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { getUserAppDir } from "./locations.ts";
+import { getUserAppDir, type SandboxNames } from "./locations.ts";
 
 const hasAppLayout = (dir: string): boolean => {
-	// Minimal signal that the bundle is present.
 	return existsSync(resolve(dir, "container", "Dockerfile"));
 };
 
-export const resolveAppDir = (): string => {
-	const fromEnv = process.env.HARDSHELL_APP_DIR;
+export const resolveAppDir = (names: SandboxNames): string => {
+	const fromEnv =
+		process.env.SANDBOX_APP_DIR ??
+		process.env.HARDSHELL_APP_DIR ??
+		process.env.APP_DIR;
 	if (fromEnv) return resolve(fromEnv);
 
 	const cwd = process.cwd();
 	if (hasAppLayout(cwd)) return cwd;
 
-	const userAppDir = getUserAppDir();
+	const userAppDir = getUserAppDir(names);
 	if (hasAppLayout(userAppDir)) return userAppDir;
 
-	// Fall back to cwd; callers can error with a more specific message.
 	return cwd;
 };
