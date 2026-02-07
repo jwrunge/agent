@@ -30,6 +30,28 @@ bun run dev
 bun run compile
 ```
 
+## Containerized sandbox wrapper (recommended)
+
+This repo includes a lightweight wrapper that runs the agent inside an OCI container with a declarative `agent-sandbox.json` config (bind mounts + read-only rootfs + optional offline networking).
+
+1) Create your sandbox config:
+
+   bun run sandbox:init
+
+2) Install/check prerequisites:
+
+   bun run sandbox:install
+
+   - macOS: installs Colima + Docker CLI via Homebrew (prompted)
+   - Windows: run inside WSL2
+   - Linux: install Podman (rootless) or Docker Engine
+
+3) Launch:
+
+   bun run sandbox:launch
+
+Edit `agent-sandbox.json` to control what host paths are mounted read-only / read-write.
+
 ## Notes
 - The SDK example uses `createAgentSession()` and streams text deltas to stdout.
 - For interactive use, prefer the CLI.

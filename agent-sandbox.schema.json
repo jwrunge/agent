@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pi-agent sandbox config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "image", "container", "mounts"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "build": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["context", "dockerfile"],
+          "properties": {
+            "context": { "type": "string", "minLength": 1 },
+            "dockerfile": { "type": "string", "minLength": 1 },
+            "buildIfMissing": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "container": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workdir": { "type": "string" },
+        "readOnlyRootFs": { "type": "boolean" },
+        "interactive": { "type": "boolean" },
+        "tty": { "type": "boolean" },
+        "tmpfs": { "type": "array", "items": { "type": "string" } },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "memory": { "type": "string" },
+            "cpus": { "type": "number", "exclusiveMinimum": 0 },
+            "pidsLimit": { "type": "integer", "minimum": 16 }
+          }
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": { "enum": ["none", "bridge", "host"] }
+          }
+        }
+      }
+    },
+    "mounts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source", "target", "mode"],
+        "properties": {
+          "source": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "mode": { "enum": ["ro", "rw"] },
+          "createIfMissing": { "type": "boolean" }
+        }
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "passThrough": { "type": "array", "items": { "type": "string" } },
+        "set": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    }
+  }
+}
